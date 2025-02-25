@@ -72,7 +72,7 @@ def crop_passport_photos(input_folder, output_folder, no_face_folder):
     print("Processing complete!")
 
 # Please put the copied path of folders , only.
-input_folder = "D:/Photo-Cropping-App/New-Photos-Crop/New Folder With Items"
-output_folder = "D:/Photo-Cropping-App/New-23-Feb-Output"
+input_folder = "D:/Photo-Cropping-App/photo_cropping/photo_crop"
+output_folder = "D:/Photo-Cropping-App/New-25-Feb-Output"
 no_face_folder = "D:/Photo-Cropping-App/No-Face-detected"
 crop_passport_photos(input_folder, output_folder, no_face_folder)
