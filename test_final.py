@@ -8,6 +8,8 @@ import numpy as np
 
 #updated by me , after neck padding increased .
 
+#and after adding the missing files details . 
+
 def detect_face(image, face_detection):
     """Run face detection and return bounding box if found."""
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -25,7 +27,6 @@ def detect_face(image, face_detection):
             return x1, y1, x2, y2  # Face detected
 
     return None  # No face detected
-
 
 def rotate_image(image, angle):
     """Rotate image by 90° or -90°."""
@@ -45,50 +46,46 @@ def crop_passport_photos(input_folder, output_folder, no_face_folder):
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(no_face_folder, exist_ok=True)
 
+    # Track skipped files
+    skipped_files = []
+
     # Iterate through all images in the input folder
     for filename in os.listdir(input_folder):
         input_path = os.path.join(input_folder, filename)
 
-        # Check if the file is an image
+        # Skip non-image files, but move them for consistency
         if not filename.lower().endswith(('.jpg', '.png', '.jpeg')):
+            skipped_files.append((filename, "Unsupported format"))
+            shutil.move(input_path, os.path.join(no_face_folder, filename))
             continue
 
         # Read the image
         image = cv2.imread(input_path)
         if image is None:
-            print(f"Could not read image: {filename}")
+            skipped_files.append((filename, "Unreadable image"))
+            shutil.move(input_path, os.path.join(no_face_folder, filename))
+            print(f"Skipped unreadable: {filename}")
             continue
 
         # Try detecting the face in the original image
         face_bbox = detect_face(image, face_detection)
 
-        # If no face is found, try rotated versions (90° and -90°)
+        # If no face is found, try rotated versions (90°, -90°, 180°)
         if face_bbox is None:
-            rotated_image1 = rotate_image(image, 90)
-            face_bbox = detect_face(rotated_image1, face_detection)
-            if face_bbox:
-                image = rotated_image1  # Use the rotated image
-
-        if face_bbox is None:
-            rotated_image2 = rotate_image(image, -90)
-            face_bbox = detect_face(rotated_image2, face_detection)
-            if face_bbox:
-                image = rotated_image2  # Use the rotated image
-
-        if face_bbox is None:                                             #
-            rotated_image3 = rotate_image(image, 180)
-            face_bbox = detect_face(rotated_image3, face_detection)        #
-            if face_bbox:                                                   #
-                image = rotated_image3                                      #
-        
+            for angle in [90, -90, 180]:
+                rotated_image = rotate_image(image, angle)
+                face_bbox = detect_face(rotated_image, face_detection)
+                if face_bbox:
+                    image = rotated_image
+                    break
 
         if face_bbox:
             x1, y1, x2, y2 = face_bbox
 
             # Adjust padding to capture full head and neck
-            padding_top = int(0.48 * (y2 - y1))  # Extra padding for head
-            padding_bottom = int(0.82 * (y2 - y1))  # Neck padding
-            padding_side = int(0.3 * (x2 - x1))  # Include shoulders
+            padding_top = int(0.48 * (y2 - y1))
+            padding_bottom = int(0.82 * (y2 - y1))
+            padding_side = int(0.3 * (x2 - x1))
 
             # Apply padding
             h, w, _ = image.shape
@@ -105,13 +102,22 @@ def crop_passport_photos(input_folder, output_folder, no_face_folder):
             cv2.imwrite(output_path, cropped_image)
             print(f"Processed and saved: {filename}")
         else:
-            # If no face is detected even after rotation, move the image to 'no_face' folder
+            skipped_files.append((filename, "Face not detected"))
             no_face_path = os.path.join(no_face_folder, filename)
             shutil.move(input_path, no_face_path)
             print(f"No face detected after rotations. Moved to 'no_face' folder: {filename}")
 
     # Release resources
     face_detection.close()
+    
+    # Print skipped file summary
+    if skipped_files:
+        print("\n Skipped Files Report:")
+        for fname, reason in skipped_files:
+            print(f"{fname} --> {reason}")
+    else:
+        print("\n All files processed successfully!")
+
     print("Processing complete!")
 
 # input/input/Aayush script/Photos new list
@@ -122,3 +128,4 @@ no_face_folder = "D:/Photo-Cropping-App/No-Face-detected"
 
 # Run the function
 crop_passport_photos(input_folder, output_folder, no_face_folder)
+
